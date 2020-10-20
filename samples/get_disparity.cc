@@ -110,13 +110,6 @@ int main(int argc, char *argv[]) {
       // ============================================================================================
       // Save stereo image in /home/ezaki-lab/Templates/img_depth/
       // ============================================================================================
-      time_t rawtime;
-      struct tm * timeinfo;
-      char buffer[80];
-      time (&rawtime);
-      timeinfo = localtime(&rawtime);
-      strftime(buffer,sizeof(buffer),"%Y%m%d%H%M%S",timeinfo);
-      std::string str(buffer);
       cv::imwrite("/home/ezaki-lab/Templates/img_stereo/image_" + str + ".jpg", stereo_img);
       // ============================================================================================
     }
