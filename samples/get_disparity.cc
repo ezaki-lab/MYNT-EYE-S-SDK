@@ -13,6 +13,7 @@
 // limitations under the License.
 #include <stdio.h>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 #include "mynteye/api/api.h"
 #include "mynteye/logger.h"
@@ -28,8 +29,13 @@ int main(int argc, char *argv[]) {
   if (!ok) return 1;
   api->ConfigStreamRequest(request);
 
+  // api->setDuplicate(true);
+
+  // api->EnablePlugin("plugins/linux-x86_64/libplugin_g_cuda9.1_opencv3.4.0.so");
+
   api->SetDisparityComputingMethodType(DisparityComputingMethod::SGBM);
-  api->EnableStreamData(Stream::DISPARITY_NORMALIZED);
+
+  api->EnableStreamData(Stream::DISPARITY);
 
   if (argc == 2) {
     std::string config_path(argv[1]);
@@ -48,9 +54,9 @@ int main(int argc, char *argv[]) {
 
   api->Start(Source::VIDEO_STREAMING);
 
-  cv::namedWindow("frame");
+  // cv::namedWindow("frame");
   // cv::namedWindow("disparity");
-  cv::namedWindow("disparity_normalized");
+  // cv::namedWindow("disparity_normalized");
 
   double fps;
   double t = 0.01;
@@ -59,27 +65,58 @@ int main(int argc, char *argv[]) {
   while (true) {
     api->WaitForStreams();
 
-    auto &&left_data = api->GetStreamData(Stream::LEFT);
-    auto &&right_data = api->GetStreamData(Stream::RIGHT);
-
-    if (!left_data.frame.empty() && !right_data.frame.empty()) {
-      cv::Mat img;
-      cv::hconcat(left_data.frame, right_data.frame, img);
-      cv::imshow("frame", img);
-    }
+    // if (!left_data.frame.empty() && !right_data.frame.empty()) {
+    //   cv::Mat img;
+    //   cv::hconcat(left_data.frame, right_data.frame, img);
+    //   cv::imshow("frame", img);
+    // }
 
     // auto &&disp_data = api->GetStreamData(Stream::DISPARITY);
     // if (!disp_data.frame.empty()) {
     //   cv::imshow("disparity", disp_data.frame);
     // }
 
-    auto &&disp_norm_data = api->GetStreamData(Stream::DISPARITY_NORMALIZED);
-    if (!disp_norm_data.frame.empty()) {
+    auto &&disp_norm_data = api->GetStreamData(Stream::DISPARITY);
+    auto &&left_data = api->GetStreamData(Stream::LEFT);
+    auto &&right_data = api->GetStreamData(Stream::RIGHT);
+    if (!left_data.frame.empty() && !right_data.frame.empty() && !disp_norm_data.frame.empty()) {
       double t_c = cv::getTickCount() / cv::getTickFrequency();
       fps = 1.0/(t_c - t);
       printf("\b\b\b\b\b\b\b\b\b%.2f", fps);
       t = t_c;
-      cv::imshow("disparity_normalized", disp_norm_data.frame);  // CV_8UC1
+      // cv::imshow("disparity_normalized", disp_norm_data.frame);  // CV_8UC1
+
+      cv::Mat disp_left_img;
+      disp_left_img = disp_norm_data.frame;
+
+      // ============================================================================================
+      // Save depth image in /home/ezaki-lab/Templates/img_depth/
+      // ============================================================================================
+      time_t rawtime;
+      struct tm * timeinfo;
+      char buffer[80];
+      time (&rawtime);
+      timeinfo = localtime(&rawtime);
+      strftime(buffer,sizeof(buffer),"%Y%m%d%H%M%S",timeinfo);
+      std::string str(buffer);
+      cv::imwrite("/home/ezaki-lab/Templates/img_depth/image_" + str + ".jpg", disp_left_img);
+      // ============================================================================================
+
+      cv::Mat stereo_img;
+      cv::hconcat(left_data.frame, right_data.frame, stereo_img);
+
+      // ============================================================================================
+      // Save stereo image in /home/ezaki-lab/Templates/img_depth/
+      // ============================================================================================
+      time_t rawtime;
+      struct tm * timeinfo;
+      char buffer[80];
+      time (&rawtime);
+      timeinfo = localtime(&rawtime);
+      strftime(buffer,sizeof(buffer),"%Y%m%d%H%M%S",timeinfo);
+      std::string str(buffer);
+      cv::imwrite("/home/ezaki-lab/Templates/img_stereo/image_" + str + ".jpg", stereo_img);
+      // ============================================================================================
     }
 
     char key = static_cast<char>(cv::waitKey(1));
